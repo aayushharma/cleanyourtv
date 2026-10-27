@@ -1,15 +1,22 @@
 package com.gathin.tvhome;
 
 import android.app.Activity;
+import android.app.ActivityManager;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.text.format.Formatter;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * The panel the remote's Settings button opens when {@code settings_key_panel} is on (HomeKeyService):
@@ -45,6 +52,7 @@ public final class QuickSettingsActivity extends Activity {
         addRow(rows, R.drawable.ic_wifi, R.string.quick_network, 0, SystemSettings.intent(this, Settings.ACTION_WIFI_SETTINGS));
         addRow(rows, R.drawable.ic_apps, R.string.quick_apps, R.string.quick_apps_hint,
                 SystemSettings.intent(this, Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS));
+        addClearRow(rows);
         // Through Home, so it rebuilds with the new choices when Launcher settings closes.
         addRow(rows, R.drawable.ic_home_settings, R.string.launcher_settings, 0,
                 new Intent(this, MainActivity.class).setAction(MainActivity.ACTION_LAUNCHER_SETTINGS));
@@ -83,5 +91,64 @@ public final class QuickSettingsActivity extends Activity {
             finish();
         });
         rows.addView(row);
+    }
+
+    /** A "Clear memory" row: shows free RAM, and on click frees it without leaving the panel. */
+    private void addClearRow(LinearLayout rows) {
+        View row = getLayoutInflater().inflate(R.layout.item_input, rows, false);
+        ((ImageView) row.findViewById(R.id.icon)).setImageResource(R.drawable.ic_boost);
+        ((TextView) row.findViewById(R.id.title)).setText(R.string.quick_clear_ram);
+        row.findViewById(R.id.dot).setVisibility(View.GONE);
+        TextView hint = row.findViewById(R.id.status);
+        hint.setText(getString(R.string.ram_free_fmt, freeRam()));
+        row.setOnClickListener(v -> clearMemory(hint));
+        rows.addView(row);
+    }
+
+    private String freeRam() {
+        ActivityManager am = getSystemService(ActivityManager.class);
+        ActivityManager.MemoryInfo info = new ActivityManager.MemoryInfo();
+        am.getMemoryInfo(info);
+        return Formatter.formatShortFileSize(this, info.availMem);
+    }
+
+    /**
+     * Soft-kill the background processes of every launchable app except this one, then report how much RAM
+     * came back. killBackgroundProcesses never touches the foreground app, so whatever is playing keeps running.
+     * Android does not expose a reliable per-app "running in the background" list to ordinary apps, so this
+     * clears them all at once rather than showing a live list.
+     */
+    private void clearMemory(TextView hint) {
+        ActivityManager am = getSystemService(ActivityManager.class);
+        ActivityManager.MemoryInfo before = new ActivityManager.MemoryInfo();
+        am.getMemoryInfo(before);
+
+        Set<String> packages = new HashSet<>();
+        PackageManager pm = getPackageManager();
+        for (String category : new String[]{Intent.CATEGORY_LAUNCHER, "android.intent.category.LEANBACK_LAUNCHER"}) {
+            Intent main = new Intent(Intent.ACTION_MAIN).addCategory(category);
+            for (ResolveInfo ri : pm.queryIntentActivities(main, 0)) {
+                packages.add(ri.activityInfo.packageName);
+            }
+        }
+        String self = getPackageName();
+        for (String pkg : packages) {
+            if (pkg.equals(self)) continue;
+            try {
+                am.killBackgroundProcesses(pkg);
+            } catch (Exception ignored) {
+                // A system-protected package that refuses just stays; keep going.
+            }
+        }
+
+        ActivityManager.MemoryInfo after = new ActivityManager.MemoryInfo();
+        am.getMemoryInfo(after);
+        long freed = after.availMem - before.availMem;
+        String now = Formatter.formatShortFileSize(this, after.availMem);
+        hint.setText(getString(R.string.ram_free_fmt, now));
+        String message = freed > 2L * 1024 * 1024
+                ? getString(R.string.ram_freed, Formatter.formatShortFileSize(this, freed), now)
+                : getString(R.string.ram_clean, now);
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
 }
