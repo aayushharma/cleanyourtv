@@ -74,6 +74,9 @@
     <string name="ram_free_fmt" translatable="false">%1$s free</string>
     <string name="ram_freed" translatable="false">Freed %1$s · now %2$s free</string>
     <string name="ram_clean" translatable="false">Already lean · %1$s free</string>
+    <string name="close_all_apps" translatable="false">Close all apps</string>
+    <string name="running_empty" translatable="false">No recent apps to close</string>
+    <string name="app_closed_fmt" translatable="false">Closed %1$s · %2$s free</string>
     <string name="on">On</string>
     <string name="off">Off</string>
     <string name="enable">Enable</string>
