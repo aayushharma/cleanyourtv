@@ -101,7 +101,10 @@ public final class QuickSettingsActivity extends Activity {
         row.findViewById(R.id.dot).setVisibility(View.GONE);
         TextView hint = row.findViewById(R.id.status);
         hint.setText(getString(R.string.ram_free_fmt, freeRam()));
-        row.setOnClickListener(v -> clearMemory(hint));
+        row.setOnClickListener(v -> {
+            startActivity(new Intent(this, RunningAppsActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            finish();
+        });
         rows.addView(row);
     }
 
@@ -110,45 +113,5 @@ public final class QuickSettingsActivity extends Activity {
         ActivityManager.MemoryInfo info = new ActivityManager.MemoryInfo();
         am.getMemoryInfo(info);
         return Formatter.formatShortFileSize(this, info.availMem);
-    }
-
-    /**
-     * Soft-kill the background processes of every launchable app except this one, then report how much RAM
-     * came back. killBackgroundProcesses never touches the foreground app, so whatever is playing keeps running.
-     * Android does not expose a reliable per-app "running in the background" list to ordinary apps, so this
-     * clears them all at once rather than showing a live list.
-     */
-    private void clearMemory(TextView hint) {
-        ActivityManager am = getSystemService(ActivityManager.class);
-        ActivityManager.MemoryInfo before = new ActivityManager.MemoryInfo();
-        am.getMemoryInfo(before);
-
-        Set<String> packages = new HashSet<>();
-        PackageManager pm = getPackageManager();
-        for (String category : new String[]{Intent.CATEGORY_LAUNCHER, "android.intent.category.LEANBACK_LAUNCHER"}) {
-            Intent main = new Intent(Intent.ACTION_MAIN).addCategory(category);
-            for (ResolveInfo ri : pm.queryIntentActivities(main, 0)) {
-                packages.add(ri.activityInfo.packageName);
-            }
-        }
-        String self = getPackageName();
-        for (String pkg : packages) {
-            if (pkg.equals(self)) continue;
-            try {
-                am.killBackgroundProcesses(pkg);
-            } catch (Exception ignored) {
-                // A system-protected package that refuses just stays; keep going.
-            }
-        }
-
-        ActivityManager.MemoryInfo after = new ActivityManager.MemoryInfo();
-        am.getMemoryInfo(after);
-        long freed = after.availMem - before.availMem;
-        String now = Formatter.formatShortFileSize(this, after.availMem);
-        hint.setText(getString(R.string.ram_free_fmt, now));
-        String message = freed > 2L * 1024 * 1024
-                ? getString(R.string.ram_freed, Formatter.formatShortFileSize(this, freed), now)
-                : getString(R.string.ram_clean, now);
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
 }
