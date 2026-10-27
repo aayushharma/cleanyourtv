@@ -23,8 +23,12 @@
     <uses-permission android:name="yandex.tv.permission.ACCESS_TV_SOURCE" />
 
     <!-- "Clear memory" in the Settings panel soft-kills other apps' background processes to free RAM
-         (QuickSettingsActivity). Protection level normal, so it is granted at install. -->
+         (QuickSettingsActivity / RunningAppsActivity). Protection level normal, so it is granted at install. -->
     <uses-permission android:name="android.permission.KILL_BACKGROUND_PROCESSES" />
+    <!-- Lists recently-used apps in the "Clear memory" screen. Special access, not an install-time grant:
+         the reinstall script turns it on with `appops set ... GET_USAGE_STATS allow` over adb. -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
 
     <!-- Android 11+ package visibility: lets the launcher list the TV apps it shows as tiles, and the
          apps that declare a module card (docs/specs/card.md). -->
@@ -130,6 +134,15 @@
              which throws IllegalStateException in onCreate (#1122); a TV is landscape anyway. -->
         <activity
             android:name=".QuickSettingsActivity"
+            android:exported="false"
+            android:taskAffinity=""
+            android:launchMode="singleTop"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar.Fullscreen" />
+        <!-- The "Clear memory" screen: recent apps you can close one by one or all at once. -->
+        <activity
+            android:name=".RunningAppsActivity"
             android:exported="false"
             android:taskAffinity=""
             android:launchMode="singleTop"
