@@ -30,28 +30,6 @@
         android:layout_height="match_parent"
         android:alpha="0" />
 
-    <!-- Big iOS-style clock filling the empty centre of the home screen, like the lock-screen time: one thin,
-         oversized time with a soft shadow so it stays legible over any wallpaper. Non-focusable and drawn behind
-         the header/grid, so it never blocks app tiles or takes remote focus; TextClock updates itself each minute. -->
-    <TextClock
-        android:id="@+id/centerTime"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:format12Hour="h:mm"
-        android:format24Hour="HH:mm"
-        android:textColor="#FFFFFFFF"
-        android:textSize="168sp"
-        android:fontFamily="@string/font_extralight"
-        android:letterSpacing="-0.04"
-        android:includeFontPadding="false"
-        android:shadowColor="#73000000"
-        android:shadowDx="0"
-        android:shadowDy="6"
-        android:shadowRadius="28"
-        android:focusable="false"
-        android:importantForAccessibility="no" />
-
     <!-- Race-weekend panel (a theme's race_calendar, see RaceWeekend): in the free space under the clock,
          shown only from shortly before a weekend's first session until the race is over. Updated once a
          minute with the clock, never animated. -->
